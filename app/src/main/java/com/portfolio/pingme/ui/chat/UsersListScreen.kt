@@ -6,10 +6,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,126 +20,159 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.portfolio.pingme.domain.model.User
 import com.portfolio.pingme.domain.repository.Resource
+import com.portfolio.pingme.ui.theme.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UsersListScreen(
     viewModel: ChatViewModel,
     onUserClick: (User) -> Unit
 ) {
     val usersState by viewModel.usersState.collectAsState()
+    var searchQuery by remember { mutableStateOf("") }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "PingMe",
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            )
-        }
+        containerColor = PurpleLightBg // Pure outer frame background from screenshot
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when (usersState) {
-                is Resource.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = MaterialTheme.colorScheme.primary
+            // Top Premium Curved Header Box from Screenshot
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                    .background(PurpleMain)
+                    .padding(20.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(
+                        text = "PINGME MESSENGER",
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        letterSpacing = 1.sp
+                    )
+
+                    // Rounded Search Bar
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        placeholder = { Text("Search chats...", color = TextMuted) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = TextMuted) },
+                        shape = RoundedCornerShape(26.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent
+                        ),
+                        singleLine = true
                     )
                 }
-                is Resource.Success -> {
-                    val users = (usersState as Resource.Success<List<User>>).data
-                    if (users.isEmpty()) {
-                        Text(
-                            text = "No users found",
+            }
+
+            // Scrollable Contacts Segment
+            Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp)) {
+                when (usersState) {
+                    is Resource.Loading -> {
+                        CircularProgressIndicator(
                             modifier = Modifier.align(Alignment.Center),
-                            fontSize = 16.sp,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = PurpleMain
                         )
-                    } else {
+                    }
+                    is Resource.Success -> {
+                        val users = (usersState as Resource.Success<List<User>>).data
                         LazyColumn(
                             modifier = Modifier.fillMaxSize()
                         ) {
                             items(users) { user ->
-                                UserListItem(user = user, onClick = { onUserClick(user) })
+                                PremiumUserRow(user = user, onClick = { onUserClick(user) })
                             }
                         }
                     }
+                    is Resource.Error -> {
+                        Text(
+                            text = "Error loading contacts",
+                            modifier = Modifier.align(Alignment.Center),
+                            color = Color.Red
+                        )
+                    }
+                    else -> Unit
                 }
-                is Resource.Error -> {
-                    val errorMessage = (usersState as Resource.Error).message
-                    Text(
-                        text = errorMessage,
-                        modifier = Modifier.align(Alignment.Center),
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-                else -> Unit
             }
         }
     }
 }
 
 @Composable
-fun UserListItem(
-    user: User,
-    onClick: () -> Unit
-) {
-    Row(
+fun PremiumUserRow(user: User, onClick: () -> Unit) {
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 14.dp, vertical = 5.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        // Mock Profile Avatar (Kyunki abhi image upload Phase 3 mein aayega)
-        Box(
-            modifier = Modifier
-                .size(50.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = if (user.name.isNotEmpty()) user.name.take(1).uppercase() else "?",
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
+            // Rounded Avatar Profile Box
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(PurpleLightBg),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (user.name.isNotEmpty()) user.name.take(1).uppercase() else "?",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = PurpleMain
+                )
+            }
 
-        Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = if (user.name.isEmpty()) user.phoneNumber else user.name,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = if (user.name.isNotEmpty()) user.phoneNumber else "Hey there! I am using PingMe.",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (user.name.isEmpty()) user.phoneNumber else user.name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = TextDark
+                )
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = "Tap to chat real-time...",
+                    fontSize = 13.sp,
+                    color = TextMuted,
+                    maxLines = 1
+                )
+            }
+
+            // Time and Badge Simulation matching screenshot layout
+            Column(horizontalAlignment = Alignment.End) {
+                Text(text = "10 min", fontSize = 11.sp, color = TextMuted)
+                Spacer(modifier = Modifier.height(6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .clip(CircleShape)
+                        .background(BadgeColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "2", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
-    HorizontalDivider(
-        modifier = Modifier.padding(start = 82.dp),
-        thickness = 0.5.dp,
-        color = MaterialTheme.colorScheme.surface
-    )
 }
