@@ -11,8 +11,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 import com.portfolio.pingme.domain.model.User
-import com.portfolio.pingme.domain.repository.Resource
 import com.portfolio.pingme.ui.chat.ChatViewModel
 
 @Composable
@@ -60,36 +61,51 @@ fun ProfileSetupScreen(
                 onClick = {
                     if (name.trim().isNotEmpty()) {
                         isLoading = true
-                        val currentUser = firebaseAuth.currentUser
-                        val user = User(
-                            uid = currentUser?.uid ?: "",
-                            name = name.trim(),
-                            phoneNumber = currentUser?.phoneNumber ?: "",
-                            isOnline = true
-                        )
-                        // Trigger saving via safe stream tracking
-                        chatViewModel.sendTextMessage(user.uid, "") // Just to establish session if needed
 
-                        // Directly writing the mapping layout
-                        val firestore = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                        firestore.collection("users").document(user.uid).set(user)
-                            .addOnSuccessListener {
-                                isLoading = false
-                                onSaveSuccess()
-                            }
-                            .addOnFailureListener {
-                                isLoading = false
-                                Toast.makeText(context, "Error saving profile", Toast.LENGTH_SHORT).show()
-                            }
+                        // Fetch the live device FCM token dynamically for instant delivery routing
+                        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+                            val deviceToken = if (task.isSuccessful) task.result else ""
+
+                            val currentUser = firebaseAuth.currentUser
+                            val user = User(
+                                uid = currentUser?.uid ?: "",
+                                name = name.trim(),
+                                phoneNumber = currentUser?.phoneNumber ?: "",
+                                profileImageUrl = "", // Future scope / Phase 3 baseline
+                                isOnline = true,
+                                fcmToken = deviceToken // Injected live push token payload
+                            )
+
+                            // Establish session mappings inside Cloud Firestore
+                            val firestore = FirebaseFirestore.getInstance()
+                            firestore.collection("users").document(user.uid).set(user)
+                                .addOnSuccessListener {
+                                    isLoading = false
+                                    onSaveSuccess()
+                                }
+                                .addOnFailureListener { e ->
+                                    isLoading = false
+                                    Toast.makeText(
+                                        context,
+                                        e.localizedMessage ?: "Error saving profile",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                        }
                     } else {
                         Toast.makeText(context, "Name cannot be empty", Toast.LENGTH_SHORT).show()
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
                 enabled = !isLoading
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
                 } else {
                     Text("Save & Continue", fontWeight = FontWeight.Bold)
                 }

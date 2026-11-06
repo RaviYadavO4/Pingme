@@ -5,5 +5,6 @@ data class User(
     val name: String = "",
     val phoneNumber: String = "",
     val profileImageUrl: String = "",
-    val isOnline: Boolean = false
+    val isOnline: Boolean = false,
+    val fcmToken: String = "" // NEW: Device Token Storage
 )
