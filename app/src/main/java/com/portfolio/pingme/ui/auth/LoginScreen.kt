@@ -23,12 +23,11 @@ fun LoginScreen(
     onLoginSuccess: () -> Unit
 ) {
     var phoneNumber by remember { mutableStateOf("") }
-    var countryCode by remember { mutableStateOf("+91") } // Default India code
+    var countryCode by remember { mutableStateOf("+91") }
     val context = LocalContext.current
     val activity = context as Activity
     val authState by viewModel.authState.collectAsState()
 
-    // Handle Firebase Authentication States
     LaunchedEffect(authState) {
         when (authState) {
             is AuthResult.CodeSent -> {
@@ -77,19 +76,17 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Country Code Input Box
                 OutlinedTextField(
                     value = countryCode,
-                    onValueChange = { countryCode = it },
-                    modifier = Modifier.width(80.dp),
+                    onValueChange = { newValue: String -> countryCode = newValue },
+                    modifier = Modifier.width(90.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     singleLine = true
                 )
 
-                // Actual Phone Number Input Box
                 OutlinedTextField(
                     value = phoneNumber,
-                    onValueChange = { phoneNumber = it },
+                    onValueChange = { newValue: String -> phoneNumber = newValue },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Phone Number") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -99,7 +96,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Dynamic Action Button (Shows Loading Spinner or Text)
             Button(
                 onClick = {
                     if (phoneNumber.trim().length >= 10) {
