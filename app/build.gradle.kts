@@ -59,7 +59,7 @@ dependencies {
 
     // Dagger - Hilt (Latest with KSP)
     implementation("com.google.dagger:hilt-android:2.60.1")
-    ksp("com.google.dagger:hilt-compiler:2.52")
+    ksp("com.google.dagger:hilt-compiler:2.60.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.4.0")
 
     // Firebase (Latest BoM)
