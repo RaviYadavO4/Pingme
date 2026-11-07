@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import com.portfolio.pingme.domain.model.Message
 import com.portfolio.pingme.domain.model.User
 import com.portfolio.pingme.domain.repository.ChatRepository
@@ -32,6 +33,10 @@ class ChatViewModel @Inject constructor(
 
     private val _messagesState = MutableStateFlow<List<Message>>(emptyList())
     val messagesState: StateFlow<List<Message>> = _messagesState.asStateFlow()
+
+    // Calling Live Stream Hooks
+    val incomingCallChannel = MutableStateFlow<String?>(null)
+    val callerNameState = MutableStateFlow<String>("")
 
     init {
         fetchAllUsers()
@@ -71,33 +76,91 @@ class ChatViewModel @Inject constructor(
                 messageType = "TEXT"
             )
             chatRepository.sendMessage(chatRoomId, message)
+
+            // 🚀 SMART FREE BYPASS: Inject immediate cross-device push alert payload ticket
+            val firestore = FirebaseFirestore.getInstance()
+            firestore.collection("users").document(currentUserId).get().addOnSuccessListener { senderDoc ->
+                val senderName = senderDoc.getString("name") ?: "New Message"
+
+                val notificationPayload = hashMapOf(
+                    "receiverId" to receiverId,
+                    "title" to senderName,
+                    "body" to textMessage.trim(),
+                    "timestamp" to System.currentTimeMillis()
+                )
+                firestore.collection("notifications").document().set(notificationPayload)
+            }
         }
     }
 
-    // ==========================================
-    // NEW: PHASE 3 MEDIA IMAGE SENDING PIPELINE
-    // ==========================================
     fun sendImageMessage(context: Context, receiverId: String, imageUri: Uri) {
         viewModelScope.launch {
-            // 1. Convert Image Uri to Compressed Base64 String
             val base64Image = ImageUtil.uriToBase64(context, imageUri)
-
             if (base64Image != null) {
                 val chatRoomId = generateChatRoomId(currentUserId, receiverId)
-
-                // 2. Build Message with type "IMAGE"
                 val message = Message(
                     senderId = currentUserId,
                     receiverId = receiverId,
-                    text = base64Image, // Base64 Text context is injected as payload
+                    text = base64Image,
                     timestamp = System.currentTimeMillis(),
                     messageType = "IMAGE"
                 )
-
-                // 3. Dispatch to Firestore pipeline
                 chatRepository.sendMessage(chatRoomId, message)
+
+                // Trigger simulated popup notification payload for image sharing as well
+                val firestore = FirebaseFirestore.getInstance()
+                firestore.collection("users").document(currentUserId).get().addOnSuccessListener { senderDoc ->
+                    val senderName = senderDoc.getString("name") ?: "New Message"
+                    val notificationPayload = hashMapOf(
+                        "receiverId" to receiverId,
+                        "title" to senderName,
+                        "body" to "📷 Shared a photo",
+                        "timestamp" to System.currentTimeMillis()
+                    )
+                    firestore.collection("notifications").document().set(notificationPayload)
+                }
             }
         }
+    }
+
+    // Call Handlers Loop Framework
+    fun listenForIncomingCalls() {
+        val firestore = FirebaseFirestore.getInstance()
+        firestore.collection("calls").document(currentUserId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                if (snapshot != null && snapshot.exists()) {
+                    val status = snapshot.getString("status") ?: ""
+                    if (status == "RINGING") {
+                        incomingCallChannel.value = snapshot.getString("channelId")
+                        callerNameState.value = snapshot.getString("callerName") ?: "PingMe Caller"
+                    } else {
+                        incomingCallChannel.value = null
+                    }
+                } else {
+                    incomingCallChannel.value = null
+                }
+            }
+    }
+
+    fun triggerOutgoingCall(receiverId: String, channelId: String) {
+        val firestore = FirebaseFirestore.getInstance()
+        firestore.collection("users").document(currentUserId).get().addOnSuccessListener { senderDoc ->
+            val senderName = senderDoc.getString("name") ?: "PingMe User"
+            val callPayload = hashMapOf(
+                "callerId" to currentUserId,
+                "callerName" to senderName,
+                "channelId" to channelId,
+                "status" to "RINGING"
+            )
+            firestore.collection("calls").document(receiverId).set(callPayload)
+        }
+    }
+
+    fun endCallSession(targetUserId: String) {
+        val firestore = FirebaseFirestore.getInstance()
+        firestore.collection("calls").document(targetUserId).delete()
+        firestore.collection("calls").document(currentUserId).delete()
     }
 
     fun generateChatRoomId(uid1: String, uid2: String): String {

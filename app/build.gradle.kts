@@ -71,6 +71,12 @@ dependencies {
 
     implementation("androidx.compose.material:material-icons-extended")
 
+    // Runtime foundation integration link
+    implementation("androidx.compose.runtime:runtime")
+
     // --- Agora Voice & Video Real-time Free SDK ---
     implementation("io.agora.rtc:full-sdk:4.6.4")
+
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
 }

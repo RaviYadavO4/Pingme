@@ -31,79 +31,77 @@ fun UsersListScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     Scaffold(
-        containerColor = PurpleLightBg // Pure outer frame background from screenshot
+        containerColor = PurpleLightBg
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Top Premium Curved Header Box from Screenshot
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp)
-                    .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
-                    .background(PurpleMain)
-                    .padding(20.dp)
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(
-                        text = "PINGME MESSENGER",
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        letterSpacing = 1.sp
-                    )
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Top Custom Banner Blueprint
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                        .background(PurpleMain)
+                        .padding(20.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text(
+                            text = "PINGME MESSENGER",
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            letterSpacing = 1.sp
+                        )
 
-                    // Rounded Search Bar
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        placeholder = { Text("Search chats...", color = TextMuted) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = TextMuted) },
-                        shape = RoundedCornerShape(26.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent
-                        ),
-                        singleLine = true
-                    )
-                }
-            }
-
-            // Scrollable Contacts Segment
-            Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp)) {
-                when (usersState) {
-                    is Resource.Loading -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center),
-                            color = PurpleMain
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            placeholder = { Text("Search chats...", color = TextMuted) },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = TextMuted) },
+                            shape = RoundedCornerShape(26.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent
+                            ),
+                            singleLine = true
                         )
                     }
-                    is Resource.Success -> {
-                        val users = (usersState as Resource.Success<List<User>>).data
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(users) { user ->
-                                PremiumUserRow(user = user, onClick = { onUserClick(user) })
+                }
+
+                // Scrollable Active Contacts Mesh
+                Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(top = 10.dp)) {
+                    when (usersState) {
+                        is Resource.Loading -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.align(Alignment.Center),
+                                color = PurpleMain
+                            )
+                        }
+                        is Resource.Success -> {
+                            val users = (usersState as Resource.Success<List<User>>).data
+                            val filteredUsers = if (searchQuery.isEmpty()) {
+                                users
+                            } else {
+                                users.filter { it.name.contains(searchQuery, ignoreCase = true) || it.phoneNumber.contains(searchQuery) }
+                            }
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                items(filteredUsers) { user ->
+                                    PremiumUserRow(user = user, onClick = { onUserClick(user) })
+                                }
                             }
                         }
+                        is Resource.Error -> {
+                            Text(
+                                text = "Error loading contacts",
+                                modifier = Modifier.align(Alignment.Center),
+                                color = Color.Red
+                            )
+                        }
+                        else -> Unit
                     }
-                    is Resource.Error -> {
-                        Text(
-                            text = "Error loading contacts",
-                            modifier = Modifier.align(Alignment.Center),
-                            color = Color.Red
-                        )
-                    }
-                    else -> Unit
                 }
             }
         }
@@ -125,12 +123,8 @@ fun PremiumUserRow(user: User, onClick: () -> Unit) {
             modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Rounded Avatar Profile Box
             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(PurpleLightBg),
+                modifier = Modifier.size(48.dp).clip(CircleShape).background(PurpleLightBg),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -151,26 +145,16 @@ fun PremiumUserRow(user: User, onClick: () -> Unit) {
                     color = TextDark
                 )
                 Spacer(modifier = Modifier.height(3.dp))
-                Text(
-                    text = "Tap to chat real-time...",
-                    fontSize = 13.sp,
-                    color = TextMuted,
-                    maxLines = 1
-                )
+                Text(text = "Tap to chat real-time...", fontSize = 13.sp, color = TextMuted)
             }
-
-            // Time and Badge Simulation matching screenshot layout
             Column(horizontalAlignment = Alignment.End) {
-                Text(text = "10 min", fontSize = 11.sp, color = TextMuted)
+                Text(text = "Active", fontSize = 11.sp, color = TextMuted)
                 Spacer(modifier = Modifier.height(6.dp))
                 Box(
-                    modifier = Modifier
-                        .size(18.dp)
-                        .clip(CircleShape)
-                        .background(BadgeColor),
+                    modifier = Modifier.size(18.dp).clip(CircleShape).background(BadgeColor),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = "2", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "✓", color = Color.White, fontSize = 10.sp)
                 }
             }
         }

@@ -12,8 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Call // Audio Call Icon
-import androidx.compose.material.icons.filled.PlayArrow // Video Call Alternate
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -73,7 +73,7 @@ fun ChatScreen(
                             fontSize = 18.sp
                         )
                         Text(
-                            text = if (isUserInCall) "In Active Call..." else "Tap for real-time actions",
+                            text = if (isUserInCall) "Active Agora connection layer..." else "Tap tools to call",
                             color = Color.White.copy(alpha = 0.7f),
                             fontSize = 12.sp
                         )
@@ -85,22 +85,18 @@ fun ChatScreen(
                     }
                 },
                 actions = {
-                    // 1. Audio Call Action Button
                     IconButton(onClick = {
                         CallManager.joinCallChannel(chatRoomId)
+                        viewModel.triggerOutgoingCall(receiverUser.uid, chatRoomId)
                         isUserInCall = true
-                        Toast.makeText(context, "Audio channel joined: $chatRoomId", Toast.LENGTH_SHORT).show()
                     }) {
                         Icon(imageVector = Icons.Default.Call, contentDescription = "Audio Call", tint = Color.White)
                     }
-
-                    // 2. Video Call Action Button
                     IconButton(onClick = {
                         CallManager.joinCallChannel(chatRoomId)
+                        viewModel.triggerOutgoingCall(receiverUser.uid, chatRoomId)
                         isUserInCall = true
-                        Toast.makeText(context, "Video session triggered", Toast.LENGTH_SHORT).show()
                     }) {
-                        // Using a premium play icon as an overlay action representation
                         Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Video Call", tint = Color.White)
                     }
                 },
@@ -109,12 +105,8 @@ fun ChatScreen(
         }
     ) { paddingValues ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(PurpleLightBg) // Purple aesthetic setup from screenshot
+            modifier = Modifier.fillMaxSize().padding(paddingValues).background(PurpleLightBg)
         ) {
-            // If user triggers calling, display a premium End Call floating dashboard layout
             if (isUserInCall) {
                 Card(
                     modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -126,12 +118,12 @@ fun ChatScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Call Room Active", fontWeight = FontWeight.Bold, color = Color.Red)
+                        Text("Dialing remote streams...", fontWeight = FontWeight.Bold, color = Color.Red)
                         Button(
                             onClick = {
                                 CallManager.leaveCallChannel()
+                                viewModel.endCallSession(receiverUser.uid)
                                 isUserInCall = false
-                                Toast.makeText(context, "Call disconnected", Toast.LENGTH_SHORT).show()
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
                         ) {
@@ -142,10 +134,7 @@ fun ChatScreen(
             }
 
             LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(messages) { message ->
@@ -154,7 +143,6 @@ fun ChatScreen(
                 }
             }
 
-            // Input Bar styling according to matching screenshot design blueprint
             Row(
                 modifier = Modifier.fillMaxWidth().padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -169,8 +157,6 @@ fun ChatScreen(
                     onValueChange = { newValue: String -> messageText = newValue },
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("Write a message...") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                    maxLines = 4,
                     shape = RoundedCornerShape(24.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
@@ -187,10 +173,7 @@ fun ChatScreen(
                             messageText = ""
                         }
                     },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(PurpleMain)
+                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(24.dp)).background(PurpleMain)
                 ) {
                     Icon(imageVector = Icons.Default.Send, contentDescription = "Send", tint = Color.White)
                 }
