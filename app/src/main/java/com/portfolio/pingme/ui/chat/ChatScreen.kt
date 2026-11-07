@@ -1,5 +1,6 @@
 package com.portfolio.pingme.ui.chat
 
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -11,8 +12,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Call // Audio Call Icon
+import androidx.compose.material.icons.filled.PlayArrow // Video Call Alternate
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Share // Attachment icon ke roop mein shamil kiya
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,7 +31,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.portfolio.pingme.domain.model.Message
 import com.portfolio.pingme.domain.model.User
+import com.portfolio.pingme.util.CallManager
 import com.portfolio.pingme.util.ImageUtil
+import com.portfolio.pingme.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -44,14 +49,12 @@ fun ChatScreen(
     val messages by viewModel.messagesState.collectAsState()
     val chatRoomId = viewModel.generateChatRoomId(viewModel.currentUserId, receiverUser.uid)
     val context = LocalContext.current
+    var isUserInCall by remember { mutableStateOf(false) }
 
-    // Launcher for opening the system photo picker gallery
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
-        uri?.let {
-            viewModel.sendImageMessage(context, receiverUser.uid, it)
-        }
+        uri?.let { viewModel.sendImageMessage(context, receiverUser.uid, it) }
     }
 
     LaunchedEffect(chatRoomId) {
@@ -69,9 +72,11 @@ fun ChatScreen(
                             color = Color.White,
                             fontSize = 18.sp
                         )
-                        if (receiverUser.isOnline) {
-                            Text(text = "Online", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
-                        }
+                        Text(
+                            text = if (isUserInCall) "In Active Call..." else "Tap for real-time actions",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 12.sp
+                        )
                     }
                 },
                 navigationIcon = {
@@ -79,9 +84,27 @@ fun ChatScreen(
                         Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
+                actions = {
+                    // 1. Audio Call Action Button
+                    IconButton(onClick = {
+                        CallManager.joinCallChannel(chatRoomId)
+                        isUserInCall = true
+                        Toast.makeText(context, "Audio channel joined: $chatRoomId", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(imageVector = Icons.Default.Call, contentDescription = "Audio Call", tint = Color.White)
+                    }
+
+                    // 2. Video Call Action Button
+                    IconButton(onClick = {
+                        CallManager.joinCallChannel(chatRoomId)
+                        isUserInCall = true
+                        Toast.makeText(context, "Video session triggered", Toast.LENGTH_SHORT).show()
+                    }) {
+                        // Using a premium play icon as an overlay action representation
+                        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Video Call", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = PurpleMain)
             )
         }
     ) { paddingValues ->
@@ -89,51 +112,71 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.4f))
+                .background(PurpleLightBg) // Purple aesthetic setup from screenshot
         ) {
+            // If user triggers calling, display a premium End Call floating dashboard layout
+            if (isUserInCall) {
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Red.copy(alpha = 0.1f)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Call Room Active", fontWeight = FontWeight.Bold, color = Color.Red)
+                        Button(
+                            onClick = {
+                                CallManager.leaveCallChannel()
+                                isUserInCall = false
+                                Toast.makeText(context, "Call disconnected", Toast.LENGTH_SHORT).show()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                        ) {
+                            Text("End Call", color = Color.White)
+                        }
+                    }
+                }
+            }
+
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(messages) { message ->
                     val isMe = message.senderId == viewModel.currentUserId
-                    MessageBubble(message = message, isMe = isMe)
+                    PremiumMessageBubble(message = message, isMe = isMe)
                 }
             }
 
+            // Input Bar styling according to matching screenshot design blueprint
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Image Attachment Button
-                IconButton(
-                    onClick = { galleryLauncher.launch("image/*") },
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Attach Media",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                IconButton(onClick = { galleryLauncher.launch("image/*") }) {
+                    Icon(imageVector = Icons.Default.Share, contentDescription = "Attach", tint = PurpleMain)
                 }
 
                 OutlinedTextField(
                     value = messageText,
                     onValueChange = { newValue: String -> messageText = newValue },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Message") },
+                    placeholder = { Text("Write a message...") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                     maxLines = 4,
                     shape = RoundedCornerShape(24.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
+                        unfocusedContainerColor = Color.White,
+                        focusedBorderColor = PurpleMain.copy(alpha = 0.5f),
+                        unfocusedBorderColor = Color.Transparent
                     )
                 )
 
@@ -147,7 +190,7 @@ fun ChatScreen(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(MaterialTheme.colorScheme.primary)
+                        .background(PurpleMain)
                 ) {
                     Icon(imageVector = Icons.Default.Send, contentDescription = "Send", tint = Color.White)
                 }
@@ -157,61 +200,46 @@ fun ChatScreen(
 }
 
 @Composable
-fun MessageBubble(message: Message, isMe: Boolean) {
-    val bubbleColor = if (isMe) Color(0xFFE7FFDB) else Color.White
+fun PremiumMessageBubble(message: Message, isMe: Boolean) {
+    val bubbleColor = if (isMe) PurpleBubbleMe else PurpleBubbleThem
+    val textColor = if (isMe) Color.White else TextDark
     val alignment = if (isMe) Alignment.CenterEnd else Alignment.CenterStart
     val shape = if (isMe) {
-        RoundedCornerShape(12.dp, 0.dp, 12.dp, 12.dp)
+        RoundedCornerShape(16.dp, 16.dp, 0.dp, 16.dp)
     } else {
-        RoundedCornerShape(0.dp, 12.dp, 12.dp, 12.dp)
+        RoundedCornerShape(16.dp, 16.dp, 16.dp, 0.dp)
     }
 
     val timeFormat = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
     val timeText = timeFormat.format(Date(message.timestamp))
 
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = alignment
-    ) {
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = alignment) {
         Column(
             modifier = Modifier
-                .widthIn(max = 280.dp)
+                .widthIn(max = 270.dp)
                 .clip(shape)
                 .background(bubbleColor)
-                .padding(horizontal = 8.dp, vertical = 6.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             if (message.messageType == "IMAGE") {
-                // Process and reconstruct the Image view layout out of Base64 text
                 val bitmap = remember(message.text) { ImageUtil.base64ToBitmap(message.text) }
                 if (bitmap != null) {
                     Image(
                         bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "Shared Image",
-                        modifier = Modifier
-                            .width(260.dp)
-                            .height(200.dp)
-                            .clip(RoundedCornerShape(8.dp)),
+                        contentDescription = "Shared Media",
+                        modifier = Modifier.width(250.dp).height(180.dp).clip(RoundedCornerShape(12.dp)),
                         contentScale = ContentScale.Crop
                     )
-                } else {
-                    Text(text = "Failed to load image", color = Color.Red, fontSize = 14.sp)
                 }
             } else {
-                Text(
-                    text = message.text,
-                    fontSize = 16.sp,
-                    color = Color(0xFF111B21),
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
+                Text(text = message.text, fontSize = 15.sp, color = textColor)
             }
-
-            Spacer(modifier = Modifier.height(2.dp))
-
+            Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = timeText,
                 fontSize = 10.sp,
-                color = Color.Gray,
-                modifier = Modifier.align(Alignment.End).padding(end = 4.dp)
+                color = if (isMe) Color.White.copy(alpha = 0.7f) else TextMuted,
+                modifier = Modifier.align(Alignment.End)
             )
         }
     }
