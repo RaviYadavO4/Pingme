@@ -29,6 +29,7 @@ import com.portfolio.pingme.ui.auth.ProfileSetupScreen
 import com.portfolio.pingme.ui.chat.ChatScreen
 import com.portfolio.pingme.ui.chat.ChatViewModel
 import com.portfolio.pingme.ui.chat.UsersListScreen
+import com.portfolio.pingme.ui.chat.WhatsAppMainScreen
 import com.portfolio.pingme.ui.theme.PingMeTheme
 import com.portfolio.pingme.util.CallManager
 import com.portfolio.pingme.util.NotificationUtil
@@ -158,7 +159,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                             "home" -> {
-                                UsersListScreen(
+                                WhatsAppMainScreen(
                                     viewModel = chatViewModel,
                                     onUserClick = { user ->
                                         selectedReceiver = user
