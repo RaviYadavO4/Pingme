@@ -1,6 +1,5 @@
 package com.portfolio.pingme.ui.chat
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
@@ -98,8 +97,13 @@ fun WhatsAppMainScreen(
         Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             when (selectedTab) {
                 0 -> UsersListScreen(viewModel = viewModel, onUserClick = onUserClick)
-                1 -> StatusScreen()
-                2 -> CallsScreen()
+                1 -> StatusScreen(viewModel = viewModel)
+                2 -> CallsScreen(
+                    viewModel = viewModel,
+                    onStartCall = { user, _ ->
+                        onUserClick(user)
+                    }
+                )
             }
         }
     }

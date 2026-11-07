@@ -1,14 +1,17 @@
 package com.portfolio.pingme.ui.chat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -16,10 +19,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.portfolio.pingme.domain.model.User
+import com.portfolio.pingme.domain.repository.Resource
 import com.portfolio.pingme.ui.theme.*
+import com.portfolio.pingme.util.CallManager
 
 @Composable
-fun CallsScreen() {
+fun CallsScreen(
+    viewModel: ChatViewModel,
+    onStartCall: (User, Boolean) -> Unit // (user, isVideo)
+) {
+    val usersState by viewModel.usersState.collectAsState()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -28,7 +39,7 @@ fun CallsScreen() {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
                 Row(
@@ -42,56 +53,92 @@ fun CallsScreen() {
                         fontSize = 24.sp,
                         color = WhatsAppTextDark
                     )
-                    IconButton(onClick = { }) {
-                        Icon(imageVector = Icons.Default.Call, contentDescription = "New Call", tint = WhatsAppDarkGreen)
-                    }
                 }
             }
 
             item {
                 Text(
-                    text = "Recent",
+                    text = "Start a WhatsApp-style Call",
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                     color = WhatsAppTextMuted
                 )
             }
 
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(WhatsAppLightBg),
-                            contentAlignment = Alignment.Center
+            when (usersState) {
+                is Resource.Success -> {
+                    val users = (usersState as Resource.Success<List<User>>).data
+                    items(users) { user ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Icon(imageVector = Icons.Default.Phone, contentDescription = "Call", tint = WhatsAppDarkGreen)
-                        }
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .clip(CircleShape)
+                                        .background(WhatsAppLightBg),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (user.name.isNotEmpty()) user.name.take(1).uppercase() else "?",
+                                        fontWeight = FontWeight.Bold,
+                                        color = WhatsAppDarkGreen
+                                    )
+                                }
 
-                        Spacer(modifier = Modifier.width(16.dp))
+                                Spacer(modifier = Modifier.width(14.dp))
 
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "End-to-end encrypted",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 15.sp,
-                                color = WhatsAppTextDark
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Your personal calls are end-to-end encrypted",
-                                fontSize = 12.sp,
-                                color = WhatsAppTextMuted
-                            )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (user.name.isEmpty()) user.phoneNumber else user.name,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp,
+                                        color = WhatsAppTextDark
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Tap icon to call",
+                                        fontSize = 12.sp,
+                                        color = WhatsAppTextMuted
+                                    )
+                                }
+
+                                // Audio Call Button
+                                IconButton(
+                                    onClick = {
+                                        val roomId = viewModel.generateChatRoomId(viewModel.currentUserId, user.uid)
+                                        CallManager.joinCallChannel(roomId)
+                                        viewModel.triggerOutgoingCall(user.uid, roomId)
+                                        onStartCall(user, false)
+                                    }
+                                ) {
+                                    Icon(imageVector = Icons.Default.Call, contentDescription = "Voice Call", tint = WhatsAppDarkGreen)
+                                }
+
+                                // Video Call Button
+                                IconButton(
+                                    onClick = {
+                                        val roomId = viewModel.generateChatRoomId(viewModel.currentUserId, user.uid)
+                                        CallManager.joinCallChannel(roomId)
+                                        viewModel.triggerOutgoingCall(user.uid, roomId)
+                                        onStartCall(user, true)
+                                    }
+                                ) {
+                                    Icon(imageVector = Icons.Default.Videocam, contentDescription = "Video Call", tint = WhatsAppDarkGreen)
+                                }
+                            }
                         }
+                    }
+                }
+                else -> {
+                    item {
+                        CircularProgressIndicator(color = WhatsAppDarkGreen)
                     }
                 }
             }
