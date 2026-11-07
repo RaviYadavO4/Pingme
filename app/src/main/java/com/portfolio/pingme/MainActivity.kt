@@ -76,6 +76,13 @@ class MainActivity : ComponentActivity() {
                 val callerName by chatViewModel.callerNameState.collectAsState()
                 var isCallConnected by remember { mutableStateOf(false) }
 
+                LaunchedEffect(incomingChannel) {
+                    if (incomingChannel == null && isCallConnected) {
+                        CallManager.leaveCallChannel()
+                        isCallConnected = false
+                    }
+                }
+
                 LaunchedEffect(chatViewModel.currentUserId) {
                     if (chatViewModel.currentUserId.isNotEmpty()) {
                         chatViewModel.listenForIncomingCalls()
