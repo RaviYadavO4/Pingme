@@ -70,4 +70,7 @@ dependencies {
     implementation("com.google.firebase:firebase-messaging-ktx")
 
     implementation("androidx.compose.material:material-icons-extended")
+
+    // --- Agora Voice & Video Real-time Free SDK ---
+    implementation("io.agora.rtc:full-sdk:4.6.4")
 }
